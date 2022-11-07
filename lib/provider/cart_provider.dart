@@ -80,23 +80,14 @@ class CartProvider with ChangeNotifier {
   }
 
   void checkout() async {
-    //final index = cart.indexWhere((element) => element.id == id);
-    // cart.removeRange(0, cart.length);
-    // _counter = 0;
-    // _quantity = 0;
-    // _totalPrice = 0;
-
     int len = cart.length;
     for(int i=0; i<len; i++){
-      // cart.removeAt(0);
-      // await _setPrefsItems();
-      // notifyListeners();
       await removeCartFirstItem();
     }
   }
 
   Future<void> removeCartFirstItem() async {
-    await dbHelper!.deleteCartItem( cart[0].id!);
+    await dbHelper.deleteCartItem( cart[0].id!);
     removeItem(cart[0].id!);
     removeCounter();
   }
