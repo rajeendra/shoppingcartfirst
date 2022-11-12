@@ -2,6 +2,7 @@ import 'package:badges/badges.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shoppingcartfirst/database/db_helper.dart';
+import 'package:shoppingcartfirst/database/data.dart' as data;
 import 'package:shoppingcartfirst/model/cart_model.dart';
 import 'package:shoppingcartfirst/provider/cart_provider.dart';
 import 'package:shoppingcartfirst/paymentgateway/api_paypal_braintree.dart';
@@ -71,9 +72,11 @@ class _CartScreenState extends State<CartScreen> {
                       shrinkWrap: true,
                       itemCount: provider.cart.length,
                       itemBuilder: (context, index) {
+                        String cat = data.getCatByPID(provider.cart[index].productId!);
                         return Card(
                           //color: Colors.blueGrey.shade200,
-                          color: Colors.tealAccent,
+                          //color: Colors.tealAccent,
+                          color: Colors.white,
                           elevation: 5.0,
                           child: Padding(
                             padding: const EdgeInsets.all(4.0),
@@ -87,123 +90,29 @@ class _CartScreenState extends State<CartScreen> {
                                   image:
                                       AssetImage(provider.cart[index].image!),
                                 ),
-                                SizedBox(
-                                  width: 130,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const SizedBox(
-                                        height: 5.0,
-                                      ),
-                                      RichText(
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                        text: TextSpan(
-                                            text: 'Name: ',
-                                            style: TextStyle(
-                                                color: Colors.blueGrey.shade800,
-                                                fontSize: 16.0),
-                                            children: [
-                                              TextSpan(
-                                                  text:
-                                                      '${provider.cart[index].productName!}\n',
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold)),
-                                            ]),
-                                      ),
-                                      RichText(
-                                        maxLines: 1,
-                                        text: TextSpan(
-                                            text: 'Unit: ',
-                                            style: TextStyle(
-                                                color: Colors.blueGrey.shade800,
-                                                fontSize: 16.0),
-                                            children: [
-                                              TextSpan(
-                                                  text:
-                                                      '${provider.cart[index].unitTag!}\n',
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold)),
-                                            ]),
-                                      ),
-                                      RichText(
-                                        maxLines: 1,
-                                        text: TextSpan(
-                                            text: 'Price: ' r"$",
-                                            style: TextStyle(
-                                                color: Colors.blueGrey.shade800,
-                                                fontSize: 16.0),
-                                            children: [
-                                              TextSpan(
-                                                  text:
-                                                      '${provider.cart[index].productPrice!}\n',
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold)),
-                                            ]),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                _buildByCat(cat,index,provider),
                                 ValueListenableBuilder<int>(
                                     valueListenable:
                                         provider.cart[index].quantity!,
                                     builder: (context, val, child) {
                                       return PlusMinusButtons(
-                                        addQuantity: () {
-                                          cart.addQuantity(
-                                              provider.cart[index].id!);
-                                          dbHelper!
-                                              .updateQuantity(Cart(
-                                                  id: index,
-                                                  productId: index.toString(),
-                                                  productName: provider
-                                                      .cart[index].productName,
-                                                  initialPrice: provider
-                                                      .cart[index].initialPrice,
-                                                  productPrice: provider
-                                                      .cart[index].productPrice,
-                                                  quantity: ValueNotifier(
-                                                      provider.cart[index]
-                                                          .quantity!.value),
-                                                  unitTag: provider
-                                                      .cart[index].unitTag,
-                                                  image: provider
-                                                      .cart[index].image))
-                                              .then((value) {
-                                            setState(() {
-                                              cart.addTotalPrice(double.parse(
-                                                  provider
-                                                      .cart[index].productPrice
-                                                      .toString()));
-                                            });
-                                          });
+                                        addQuantity: (){
+                                          _addQuantity(cart, provider, index);
                                         },
                                         deleteQuantity: () {
-                                          cart.deleteQuantity(
-                                              provider.cart[index].id!);
-                                          cart.removeTotalPrice(double.parse(
-                                              provider.cart[index].productPrice
-                                                  .toString()));
+                                          _deleteQuantity(cart, provider, index);
                                         },
                                         text: val.toString(),
                                       );
                                     }),
-                                IconButton(
-                                    onPressed: () {
-                                      dbHelper!.deleteCartItem(
-                                          provider.cart[index].id!);
-                                      provider
-                                          .removeItem(provider.cart[index].id!);
-                                      provider.removeCounter();
-                                    },
-                                    icon: Icon(
-                                      Icons.delete,
-                                      color: Colors.red.shade800,
-                                    )),
+                                // IconButton(
+                                //     onPressed: () {
+                                //       _deleteCartItem(provider, index);
+                                //     },
+                                //     icon: Icon(
+                                //       Icons.delete,
+                                //       color: Colors.red.shade800,
+                                //     )),
                               ],
                             ),
                           ),
@@ -213,6 +122,7 @@ class _CartScreenState extends State<CartScreen> {
               },
             ),
           ),
+          // Display total
           Consumer<CartProvider>(
             builder: (BuildContext context, value, Widget? child) {
               final ValueNotifier<int?> totalPrice = ValueNotifier(null);
@@ -236,6 +146,7 @@ class _CartScreenState extends State<CartScreen> {
           )
         ],
       ),
+      // Proceed to pay
       bottomNavigationBar: InkWell(
         onTap: () async {
           if(cart.counter > 0){
@@ -268,6 +179,173 @@ class _CartScreenState extends State<CartScreen> {
       ),
     );
   }
+
+  _addQuantity(cart, provider, index) {
+    //final cart = Provider.of<CartProvider>(context);
+    cart.addQuantity(provider.cart[index].id!);
+    dbHelper!
+        .updateQuantity(Cart(
+            id: index,
+            productId: provider.cart[index].productId,
+            productName: provider.cart[index].productName,
+            initialPrice: provider.cart[index].initialPrice,
+            productPrice: provider.cart[index].productPrice,
+            quantity: ValueNotifier(provider.cart[index].quantity!.value),
+            unitTag: provider.cart[index].unitTag,
+            image: provider.cart[index].image))
+        .then((value) {
+          setState(() {
+            cart.addTotalPrice(
+                double.parse(provider.cart[index].productPrice.toString()));
+          });
+        });
+  }
+
+  _deleteQuantity(cart, provider, index) {
+    if(provider.cart[index].quantity!.value==1){
+      _deleteCartItem(provider, index);
+      return;
+    }
+    cart.deleteQuantity(provider.cart[index].id!);
+    dbHelper!
+        .updateQuantity(Cart(
+        id: index,
+        productId: provider.cart[index].productId,
+        productName: provider.cart[index].productName,
+        initialPrice: provider.cart[index].initialPrice,
+        productPrice: provider.cart[index].productPrice,
+        quantity: ValueNotifier(provider.cart[index].quantity!.value),
+        unitTag: provider.cart[index].unitTag,
+        image: provider.cart[index].image));
+
+    cart.removeTotalPrice(
+        double.parse(provider.cart[index].productPrice.toString()));
+  }
+
+  _deleteCartItem(providerx, index) {
+    dbHelper!.deleteCartItem(providerx.cart[index].id!);
+    providerx.removeItem(providerx.cart[index].id!);
+    providerx.removeCounter();
+  }
+
+  Widget _buildByCat(String cat, int index, provider){
+    if(cat == 'electronic'){
+      return _buildElectronicCard(index, provider);
+    }
+    return _buildFruitCard(index, provider);
+  }
+
+  Widget _buildFruitCard(index, provider){
+    return SizedBox(
+      width: 130,
+      child: Column(
+        crossAxisAlignment:
+        CrossAxisAlignment.start,
+        children: [
+          const SizedBox(
+            height: 5.0,
+          ),
+          RichText(
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            text: TextSpan(
+                //text: 'Name: ',
+                text: '',
+                style: TextStyle(
+                    color: Colors.blueGrey.shade800,
+                    fontSize: 16.0),
+                children: [
+                  TextSpan(
+                      text:
+                      '${provider.cart[index].productName!}\n',
+                      style: const TextStyle(
+                          fontWeight:
+                          FontWeight.bold)),
+                ]),
+          ),
+          RichText(
+            maxLines: 1,
+            text: TextSpan(
+                text: 'Unit: ',
+                style: TextStyle(
+                    color: Colors.blueGrey.shade800,
+                    fontSize: 16.0),
+                children: [
+                  TextSpan(
+                      text:
+                      '${provider.cart[index].unitTag!}\n',
+                      style: const TextStyle(
+                          fontWeight:
+                          FontWeight.bold)),
+                ]),
+          ),
+          RichText(
+            maxLines: 1,
+            text: TextSpan(
+                text: 'Price: ' r"$",
+                style: TextStyle(
+                    color: Colors.blueGrey.shade800,
+                    fontSize: 16.0),
+                children: [
+                  TextSpan(
+                      text:
+                      '${provider.cart[index].productPrice!}\n',
+                      style: const TextStyle(
+                          fontWeight:
+                          FontWeight.bold)),
+                ]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildElectronicCard(index, provider){
+    return Container(
+      //width: 130,
+      padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
+      child: Column(
+        crossAxisAlignment:
+        CrossAxisAlignment.start,
+        children: [
+          const SizedBox(
+            height: 5.0,
+          ),
+          SizedBox(
+            width: 130,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(
+                  height: 5.0,
+                ),
+                SizedBox(
+                  //height: 5.0,
+                  child: Text(
+                    '${provider.cart[index].productName!}\n',
+                    style: TextStyle(
+                      //fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  //height: 5.0,
+                  child: Text(
+                    'US\$  ${provider.cart[index].productPrice.toStringAsFixed(2)!}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class PlusMinusButtons extends StatelessWidget {
@@ -286,7 +364,13 @@ class PlusMinusButtons extends StatelessWidget {
     return Row(
       children: [
         IconButton(onPressed: deleteQuantity, icon: const Icon(Icons.remove)),
-        Text(text),
+        Text(
+          text,
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+          ),
+        ),
         IconButton(onPressed: addQuantity, icon: const Icon(Icons.add)),
       ],
     );

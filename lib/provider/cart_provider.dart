@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shoppingcartfirst/database/db_helper.dart';
@@ -9,6 +10,7 @@ class CartProvider with ChangeNotifier {
   int _quantity = 1;
   int get counter => _counter;
   int get quantity => _quantity;
+  Map addedProductsMAP = new Map();
 
   double _totalPrice = 0.0;
   double get totalPrice => _totalPrice;
@@ -26,6 +28,7 @@ class CartProvider with ChangeNotifier {
     prefs.setInt('cart_items', _counter);
     prefs.setInt('item_quantity', _quantity);
     prefs.setDouble('total_price', _totalPrice);
+    prefs.setString('added_products', jsonEncode(addedProductsMAP));
     notifyListeners();
   }
 
@@ -34,6 +37,15 @@ class CartProvider with ChangeNotifier {
     _counter = prefs.getInt('cart_items') ?? 0;
     _quantity = prefs.getInt('item_quantity') ?? 1;
     _totalPrice = prefs.getDouble('total_price') ?? 0;
+    String _added_products = prefs.getString('added_products') ?? '';
+    if (_added_products.length>0){
+      addedProductsMAP = jsonDecode(_added_products);
+    }
+  }
+
+  void addItemToCart(pid){
+    addedProductsMAP[pid] = pid;
+    _setPrefsItems();
   }
 
   void addCounter() {
@@ -56,6 +68,7 @@ class CartProvider with ChangeNotifier {
   void addQuantity(int id) {
     final index = cart.indexWhere((element) => element.id == id);
     cart[index].quantity!.value = cart[index].quantity!.value + 1;
+    _quantity=cart[index].quantity!.value;
     _setPrefsItems();
     notifyListeners();
   }
@@ -65,8 +78,10 @@ class CartProvider with ChangeNotifier {
     final currentQuantity = cart[index].quantity!.value;
     if (currentQuantity <= 1) {
       currentQuantity == 1;
+      _quantity = 1;
     } else {
       cart[index].quantity!.value = currentQuantity - 1;
+      _quantity = cart[index].quantity!.value;
     }
     _setPrefsItems();
     notifyListeners();
@@ -74,9 +89,11 @@ class CartProvider with ChangeNotifier {
 
   void removeItem(int id) {
     final index = cart.indexWhere((element) => element.id == id);
+    final pid = cart[index].productId;
     cart.removeAt(index);
     _setPrefsItems();
     notifyListeners();
+    addedProductsMAP.remove(pid);
   }
 
   void checkout() async {
@@ -84,6 +101,15 @@ class CartProvider with ChangeNotifier {
     for(int i=0; i<len; i++){
       await removeCartFirstItem();
     }
+  }
+
+  bool isItemAdded(String pid){
+    bool avail = false;
+    var p = addedProductsMAP[pid];
+    if(p!=null){
+      avail = true;
+    }
+    return avail;
   }
 
   Future<void> removeCartFirstItem() async {

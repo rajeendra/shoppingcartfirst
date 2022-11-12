@@ -79,4 +79,11 @@ class DBHelper {
         await dbClient!.query('cart', where: 'id = ?', whereArgs: [id]);
     return queryIdResult.map((e) => Cart.fromMap(e)).toList();
   }
+
+  Future<List<Cart>> getCartProductId(String pid) async {
+    var dbClient = await database;
+    final List<Map<String, Object?>> queryIdResult =
+    await dbClient!.query('cart', where: 'productId = ?', whereArgs: [pid]);
+    return queryIdResult.map((e) => Cart.fromMap(e)).toList();
+  }
 }
