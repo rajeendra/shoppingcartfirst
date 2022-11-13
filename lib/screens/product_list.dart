@@ -5,7 +5,6 @@ import 'package:shoppingcartfirst/model/item_model.dart';
 import 'package:shoppingcartfirst/provider/cart_provider.dart';
 import 'package:shoppingcartfirst/database/db_helper.dart';
 import 'package:shoppingcartfirst/database/data.dart' as data;
-import 'package:shoppingcartfirst/model/cart_model.dart';
 import 'package:shoppingcartfirst/screens/cart_screen.dart';
 import 'package:shoppingcartfirst/screens/product.dart';
 
@@ -19,10 +18,18 @@ class ProductList extends StatefulWidget {
 class _ProductListState extends State<ProductList> {
   DBHelper dbHelper = DBHelper();
   List<Item> products = data.products;
+  bool badgeValueFetched = false;
+
+  @override
+  void initState() {
+    super.initState();
+    badgeValueFetched = false;
+  }
 
   //List<bool> clicked = List.generate(10, (index) => false, growable: true);
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance!.addPostFrameCallback((_) => afterBuild(context));
     final cart = Provider.of<CartProvider>(context);
     return Scaffold(
       appBar: AppBar(
@@ -86,6 +93,14 @@ class _ProductListState extends State<ProductList> {
             );
           }),
     );
+  }
+
+  void afterBuild(ctx) async {
+    // executes after build is done
+    if(!badgeValueFetched){
+      String result = await context.read<CartProvider>().initBadge();
+      badgeValueFetched = true;
+    }
   }
 
   List<Widget> _buildByCat(String cat, int index){

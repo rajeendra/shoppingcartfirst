@@ -23,6 +23,20 @@ class CartProvider with ChangeNotifier {
     return cart;
   }
 
+  Future<String> initBadge() async {
+    String result = 'OK';
+    try {
+      List<Cart> savedCart = await getData();
+      _counter = savedCart.length;
+    } catch (e) {
+      print(e);
+      result = 'ERROR';
+      //throw e;
+    }
+    notifyListeners();
+    return result;
+  }
+
   Future<void> _setPrefsItems() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setInt('cart_items', _counter);

@@ -12,7 +12,8 @@ class DBHelper {
       return _database!;
     }
     _database = await initDatabase();
-    return null;
+    //return null;
+    return _database!;
   }
 
   initDatabase() async {
@@ -56,10 +57,11 @@ class DBHelper {
   }
 
   Future<List<Cart>> getCartList() async {
+    List<Cart> cartItems = [];
     var dbClient = await database;
-    final List<Map<String, Object?>> queryResult =
-        await dbClient!.query('cart');
-    return queryResult.map((result) => Cart.fromMap(result)).toList();
+    final List<Map<String, Object?>> queryResult = await dbClient!.query('cart');
+    cartItems = queryResult.map((result) => Cart.fromMap(result)).toList();
+    return cartItems;
   }
 
   Future<int> deleteCartItem(int id) async {
